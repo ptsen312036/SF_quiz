@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>廢物法金人の每日修行</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #F0EEE9;
+  --surface: #FAFAF8;
+  --border: #E2DFD8;
+  --border-strong: #C8C4BB;
+  --text: #1A1916;
+  --text-secondary: #6B6760;
+  --text-tertiary: #9E9B95;
+  --green: #1A7A4A;
+  --green-bg: #EAF5EF;
+  --green-border: #A8D9BC;
+  --red: #B03030;
+  --red-bg: #FAEAEA;
+  --red-border: #E0AAAA;
+  --amber: #8A5A00;
+  --amber-bg: #FDF3DC;
+  --amber-border: #E8C96A;
+  --blue: #1A4A8A;
+  --blue-bg: #EAF0FA;
+  --blue-border: #A8BEDC;
+  --accent: #1A7A4A;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; min-height: 100dvh;
+}
+.view { display: none; }
+.view.active { display: block; }
+
+/* Topbar */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(240,238,233,0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar-title { font-size: 15px; font-weight: 600; flex: 1; }
+.topbar-sub { font-size: 13px; color: var(--text-secondary); }
+.icon-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary); font-size: 20px; padding: 2px;
+  display: flex; align-items: center; font-family: inherit;
+}
+.content {
+  max-width: 600px; margin: 0 auto;
+  padding: 16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);
+}
+
+/* Auth */
+.auth-wrap { max-width: 400px; margin: 60px auto; padding: 0 20px; }
+.auth-logo { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.auth-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.5; }
+.auth-tabs { display: flex; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.auth-tab { flex: 1; padding: 10px; font-size: 14px; font-weight: 500; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-family: inherit; }
+.auth-tab.active { background: var(--text); color: #fff; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 13px; font-weight: 500; margin-bottom: 6px; display: block; color: var(--text-secondary); }
+.form-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; }
+.form-input:focus { border-color: var(--accent); }
+.form-btn { width: 100%; padding: 14px; background: var(--text); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
+.form-btn:disabled { opacity: 0.5; cursor: default; }
+.auth-msg { font-size: 13px; text-align: center; margin-top: 14px; min-height: 20px; }
+.auth-msg.error { color: var(--red); }
+.auth-msg.success { color: var(--green); }
+
+/* Streak */
+.streak-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.streak-icon { font-size: 28px; }
+.streak-num { font-size: 20px; font-weight: 700; color: var(--accent); }
+.streak-label { font-size: 12px; color: var(--text-secondary); }
+
+/* Today card */
+.today-card { background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.today-card-label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 6px; }
+.today-card-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.today-card-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+.today-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.today-card-status { font-size: 13px; color: var(--text-secondary); }
+.today-card-status.done { color: var(--green); font-weight: 500; }
+.start-btn { background: var(--text); color: #fff; border: none; border-radius: var(--radius-sm); padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.start-btn.done-btn { background: var(--green); }
+.regen-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; color: var(--text-secondary); cursor: pointer; font-family: inherit; }
+.admin-badge { font-size: 11px; background: var(--amber-bg); color: var(--amber); border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+
+/* Calendar */
+.calendar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.calendar-month { font-size: 15px; font-weight: 600; }
+.cal-nav { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; padding: 4px 8px; border-radius: 6px; font-family: inherit; }
+.cal-nav:active { background: var(--bg); }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-weekday { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-tertiary); padding: 4px 0 8px; }
+.cal-day {
+  aspect-ratio: 1; border-radius: 50%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; cursor: pointer;
+  font-size: 13px; font-weight: 500; position: relative;
+  border: 2px solid transparent; transition: background 0.1s;
+}
+.cal-day:active { opacity: 0.7; }
+.cal-day.empty { cursor: default; }
+.cal-day.future { color: var(--text-tertiary); cursor: default; }
+.cal-day.today { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.cal-day.has-quiz { cursor: pointer; }
+.cal-day.done-perfect { background: var(--green-bg); border-color: var(--green-border); color: var(--green); }
+.cal-day.done-partial { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber); }
+.cal-day.has-quiz-only { background: var(--blue-bg); border-color: var(--blue-border); color: var(--blue); }
+.cal-day.no-quiz { color: var(--text-tertiary); cursor: default; }
+.cal-dot { width: 4px; height: 4px; border-radius: 50%; position: absolute; bottom: 4px; }
+.cal-legend { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.cal-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.cal-legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; }
+
+/* Loading */
+.loading-view { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; padding: 32px; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 15px; color: var(--text-secondary); text-align: center; line-height: 1.6; }
+.loading-sub { font-size: 13px; color: var(--text-tertiary); text-align: center; }
+
+/* Quiz */
+.progress-track { height: 4px; background: var(--border); border-radius: 2px; }
+.progress-fill { height: 4px; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+.progress-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; }
+.badge-easy { background: var(--green-bg); color: var(--green); }
+.badge-medium { background: var(--amber-bg); color: var(--amber); }
+.badge-hard { background: var(--red-bg); color: var(--red); }
+.scenario-box { background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.75; color: #444; border-left: 3px solid var(--accent); }
+.scenario-box-label { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; }
+.question-text { font-size: 15px; font-weight: 500; line-height: 1.65; margin-bottom: 14px; }
+.options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.option-btn { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; font-size: 14px; color: var(--text); cursor: pointer; text-align: left; line-height: 1.5; font-family: inherit; }
+.option-btn:active:not(:disabled) { background: var(--bg); }
+.option-btn.reveal { background: var(--green-bg); border-color: var(--green-border); color: var(--green); }
+.option-btn.wrong { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.option-btn:disabled { cursor: default; }
+.explanation-box { background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.8; color: #555; border-left: 3px solid var(--border-strong); margin-bottom: 14px; }
+.explanation-box strong { color: var(--text); font-weight: 600; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(240,238,233,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 10px 16px calc(env(safe-area-inset-bottom,0px) + 10px); display: flex; gap: 10px; max-width: 600px; margin: 0 auto; }
+.nav-btn { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 500; color: var(--text); cursor: pointer; font-family: inherit; }
+.nav-btn:active:not(:disabled) { background: var(--bg); }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+.nav-btn.primary { background: var(--text); color: #fff; border-color: var(--text); flex: 1.5; }
+
+/* Score */
+.score-view { padding: 32px 16px; text-align: center; }
+.score-ring { width: 110px; height: 110px; border-radius: 50%; background: var(--green-bg); border: 2px solid var(--green-border); display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 20px; }
+.score-big { font-size: 36px; font-weight: 700; color: var(--green); line-height: 1; }
+.score-denom { font-size: 14px; color: var(--green); margin-top: 2px; }
+.score-topic { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.score-msg { font-size: 14px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px; max-width: 360px; margin-left: auto; margin-right: auto; }
+.score-btns { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin: 0 auto; }
+.score-btn { border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 500; cursor: pointer; width: 100%; font-family: inherit; border: none; }
+.score-btn.primary { background: var(--text); color: #fff; }
+.score-btn.secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+/* Day detail */
+.day-detail-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.day-detail-date { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.day-detail-topic { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.day-detail-score { font-size: 14px; color: var(--text-secondary); }
+.day-detail-score.perfect { color: var(--green); font-weight: 500; }
+.wrong-only-toggle { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.toggle-btn { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 13px; cursor: pointer; font-family: inherit; color: var(--text-secondary); }
+.toggle-btn.active { background: var(--red-bg); border-color: var(--red-border); color: var(--red); font-weight: 500; }
+.history-q-item { padding: 16px; border-bottom: 1px solid var(--border); }
+.history-q-num { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.wrong-badge { font-size: 10px; background: var(--red-bg); color: var(--red); border-radius: 4px; padding: 1px 6px; font-weight: 600; }
+.history-q-text { font-size: 14px; font-weight: 500; margin-bottom: 10px; line-height: 1.55; }
+.history-q-options { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.history-q-opt { font-size: 13px; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); color: var(--text-secondary); background: var(--surface); }
+.history-q-opt.correct { background: var(--green-bg); border-color: var(--green-border); color: var(--green); }
+.history-q-opt.wrong { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.history-exp { font-size: 13px; color: #555; line-height: 1.75; padding: 10px 12px; background: var(--bg); border-radius: var(--radius-sm); border-left: 3px solid var(--border-strong); }
+.history-exp strong { color: var(--text); }
+.no-wrong { text-align: center; padding: 40px 20px; color: var(--text-tertiary); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="view-auth" class="view active">
+  <div class="auth-wrap">
+    <div class="auth-logo">廢物法金人の每日修行</div>
+    <div class="auth-sub">每日 10 題，AI 即時生成<br>練習紀錄同步雲端</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">登入</button>
+      <button class="auth-tab" onclick="switchTab('signup')">註冊</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="auth-email" type="email" placeholder="你的 Email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">密碼</label>
+      <input class="form-input" id="auth-password" type="password" placeholder="至少 6 個字元">
+    </div>
+    <button class="form-btn" id="auth-btn" onclick="handleAuth()">登入</button>
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="view-home" class="view">
+  <div class="topbar">
+    <span class="topbar-title">廢物法金人の每日修行</span>
+    <span id="admin-badge"></span>
+    <button class="icon-btn" onclick="handleLogout()" title="登出">⎋</button>
+  </div>
+  <div class="content">
+    <div class="streak-bar">
+      <div class="streak-icon">🔥</div>
+      <div style="flex:1">
+        <div class="streak-num" id="streak-num">0</div>
+        <div class="streak-label">連續練習天數</div>
+      </div>
+    </div>
+
+    <!-- Today card -->
+    <div class="today-card">
+      <div class="today-card-label">今日題組</div>
+      <div class="today-card-title" id="today-topic">載入中…</div>
+      <div class="today-card-desc" id="today-desc"></div>
+      <div class="today-card-footer">
+        <span class="today-card-status" id="today-status">尚未開始</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="regen-btn" id="regen-btn" onclick="regenToday()" style="display:none">↺ 重新生成</button>
+          <button class="start-btn" id="today-btn" onclick="startQuiz(getTodayKey())">開始練習</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-wrap">
+      <div class="calendar-header">
+        <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+        <span class="calendar-month" id="cal-month"></span>
+        <button class="cal-nav" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="calendar-grid" id="cal-weekdays"></div>
+      <div class="calendar-grid" id="cal-grid"></div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green-bg);border-color:var(--green-border)"></div>全對</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--amber-bg);border-color:var(--amber-border)"></div>有錯題</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--blue-bg);border-color:var(--blue-border)"></div>有題目未作答</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--surface);border-color:var(--border)"></div>無題目</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="view-loading" class="view">
+  <div class="topbar"><span class="topbar-title" id="loading-title">產生題目中</span></div>
+  <div class="content">
+    <div class="loading-view">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Claude 正在根據今日主題<br>生成 10 道練習題…</div>
+      <div class="loading-sub">通常需要 15–30 秒</div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="view-quiz" class="view">
+  <div class="topbar">
+    <button class="icon-btn" onclick="confirmExit()">&#8592;</button>
+    <span class="topbar-title" id="quiz-topic-bar"></span>
+    <span class="topbar-sub" id="quiz-counter"></span>
+  </div>
+  <div class="content" style="padding-bottom:100px">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-labels"><span id="prog-left"></span><span id="prog-right"></span></div>
+    <div id="quiz-content"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" id="btn-prev" onclick="prevQ()" disabled>&#8592; 上一題</button>
+    <button class="nav-btn primary" id="btn-next" onclick="nextQ()">下一題 &#8594;</button>
+  </div>
+</div>
+
+<!-- SCORE -->
+<div id="view-score" class="view">
+  <div class="topbar">
+    <button class="icon-btn" onclick="showView('home');renderHome()">&#8592;</button>
+    <span class="topbar-title">練習完成</span>
+  </div>
+  <div class="content">
+    <div class="score-view">
+      <div class="score-ring">
+        <div class="score-big" id="score-big">0</div>
+        <div class="score-denom" id="score-denom">/ 10</div>
+      </div>
+      <div class="score-topic" id="score-topic"></div>
+      <div class="score-msg" id="score-msg"></div>
+      <div class="score-btns">
+        <button class="score-btn primary" onclick="showView('home');renderHome()">回到首頁</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DAY DETAIL -->
+<div id="view-day" class="view">
+  <div class="topbar">
+    <button class="icon-btn" onclick="showView('home')">&#8592;</button>
+    <span class="topbar-title" id="day-topbar-title">練習回顧</span>
+  </div>
+  <div id="day-detail-content" style="padding-bottom:20px"></div>
+</div>
+
+<script>
+const SUPABASE_URL  = "https://fpgcvfufoapiijvkuycr.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwZ2N2ZnVmb2FwaWlqdmt1eWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzkyOTQsImV4cCI6MjA5NzkxNTI5NH0.9nBNQ5wxwiL8W12nxCFHv_BhnzatmhsMiWGI10sp9jI";
+const ADMIN_EMAIL   = "claire1020202@gmail.com";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const TOPICS = [
+  { id:"cross-border",    title:"跨境架構與OBU",     desc:"多層持股、東南亞外匯管制、跨境擔保設計" },
+  { id:"lbo",             title:"LBO 槓桿收購",       desc:"PE Fund 收購架構、covenant 設計與退出策略" },
+  { id:"project-finance", title:"專案融資",           desc:"離岸風電 Project Finance、DSCR 與風險分配" },
+  { id:"real-estate",     title:"不動產結構融資",     desc:"商辦融資、REITs、LTV 壓力測試與擔保結構" },
+  { id:"syndicated",      title:"聯合貸款結構",       desc:"聯貸條款、covenant、違約處理與銀行間談判" },
+  { id:"mezz",            title:"夾層融資與信用結構",  desc:"Mezzanine、PIK、信用瀑布與優先順位設計" },
+  { id:"dcm",             title:"債券市場與資本市場",  desc:"高收益債、投資級債、EMTN 與發行架構" },
+];
+
+let currentUser   = null;
+let currentQuiz   = null;
+let currentQ      = 0;
+let historyCache  = [];  // quiz_records
+let dailyCache    = {};  // date -> daily_quiz row
+let isAdmin       = false;
+let calYear       = new Date().getFullYear();
+let calMonth      = new Date().getMonth();
+let showWrongOnly = false;
+
+// ── Utils ──
+function getTodayKey() { return new Date().toISOString().slice(0,10); }
+function getTopicForDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const n = Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+  return TOPICS[n % TOPICS.length];
+}
+
+// ── Views ──
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Auth ──
+let authMode = 'login';
+function switchTab(mode) {
+  authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (mode==='login'&&i===0)||(mode==='signup'&&i===1));
+  });
+  document.getElementById('auth-btn').textContent = mode==='login' ? '登入' : '註冊';
+  document.getElementById('auth-msg').textContent = '';
+}
+
+async function handleAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-btn');
+  const msg      = document.getElementById('auth-msg');
+  if (!email || !password) { msg.textContent='請填入 Email 和密碼'; msg.className='auth-msg error'; return; }
+  btn.disabled = true; btn.textContent = '處理中…'; msg.textContent = '';
+  try {
+    let result;
+    if (authMode==='login') result = await sb.auth.signInWithPassword({ email, password });
+    else result = await sb.auth.signUp({ email, password });
+    if (result.error) throw result.error;
+    if (authMode==='signup' && !result.data.session) {
+      msg.textContent = '註冊成功！請查收確認信後登入。';
+      msg.className = 'auth-msg success';
+      switchTab('login');
+    } else {
+      currentUser = result.data.user;
+      await initHome();
+    }
+  } catch(e) {
+    msg.textContent = e.message || '發生錯誤，請再試一次';
+    msg.className = 'auth-msg error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode==='login' ? '登入' : '註冊';
+  }
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  currentUser = null; historyCache = []; dailyCache = {}; isAdmin = false;
+  showView('auth');
+}
+
+// ── Init ──
+async function initHome() {
+  isAdmin = currentUser?.email === ADMIN_EMAIL;
+  showView('home');
+  await Promise.all([loadHistory(), loadDailyQuizzes()]);
+  renderHome();
+}
+
+// ── Data loading ──
+async function loadHistory() {
+  if (!currentUser) return;
+  const { data } = await sb.from('quiz_records')
+    .select('*').eq('user_id', currentUser.id)
+    .order('date', { ascending: false }).limit(90);
+  historyCache = data || [];
+}
+
+async function loadDailyQuizzes() {
+  // Load last 60 days of daily_quiz to know which dates have quizzes
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const fromDate = sixtyDaysAgo.toISOString().slice(0,10);
+  const { data } = await sb.from('daily_quiz')
+    .select('date, topic')
+    .gte('date', fromDate)
+    .order('date', { ascending: false });
+  dailyCache = {};
+  (data || []).forEach(r => { dailyCache[r.date] = r; });
+}
+
+async function saveRecord(record) {
+  if (!currentUser) return;
+  await sb.from('quiz_records').upsert({
+    user_id: currentUser.id,
+    date: record.date, topic: record.topic,
+    score: record.score, questions: record.questions,
+  }, { onConflict: 'user_id,date' });
+  await loadHistory();
+}
+
+function getMyRecord(date) { return historyCache.find(h => h.date===date) || null; }
+
+function getStreak() {
+  const sorted = [...historyCache].sort((a,b) => b.date.localeCompare(a.date));
+  if (!sorted.length) return 0;
+  let streak = 0;
+  for (let i=0; i<sorted.length; i++) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    if (sorted[i]?.date === d.toISOString().slice(0,10)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── Home render ──
+function renderHome() {
+  const today = getTodayKey();
+  const topic = getTopicForDate(today);
+  const rec   = getMyRecord(today);
+
+  document.getElementById('today-topic').textContent = topic.title;
+  document.getElementById('today-desc').textContent  = topic.desc;
+  document.getElementById('streak-num').textContent  = getStreak();
+
+  const adminBadge = document.getElementById('admin-badge');
+  const regenBtn   = document.getElementById('regen-btn');
+  if (isAdmin) {
+    adminBadge.innerHTML = '<span class="admin-badge">管理員</span>';
+    regenBtn.style.display = 'block';
+  } else {
+    adminBadge.innerHTML = '';
+    regenBtn.style.display = 'none';
+  }
+
+  if (rec) {
+    document.getElementById('today-status').textContent = `已完成：${rec.score} / ${rec.questions.length} 答對`;
+    document.getElementById('today-status').className   = 'today-card-status done';
+    document.getElementById('today-btn').textContent    = '再練一次';
+    document.getElementById('today-btn').className      = 'start-btn done-btn';
+  } else {
+    document.getElementById('today-status').textContent = '尚未開始';
+    document.getElementById('today-status').className   = 'today-card-status';
+    document.getElementById('today-btn').textContent    = '開始練習';
+    document.getElementById('today-btn').className      = 'start-btn';
+  }
+
+  renderCalendar();
+}
+
+// ── Calendar ──
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const today = getTodayKey();
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('cal-month').textContent = `${calYear} 年 ${monthNames[calMonth]}`;
+
+  // Weekday headers
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('cal-weekdays').innerHTML = weekdays.map(d =>
+    `<div class="cal-weekday">${d}</div>`
+  ).join('');
+
+  // Days
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  let cells = [];
+  // Empty cells
+  for (let i=0; i<firstDay; i++) cells.push('<div class="cal-day empty"></div>');
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday  = dateStr === today;
+    const isFuture = dateStr > today;
+    const hasQuiz  = !!dailyCache[dateStr];
+    const myRec    = getMyRecord(dateStr);
+
+    let cls = 'cal-day';
+    let onclick = '';
+
+    if (isFuture) {
+      cls += ' future';
+    } else if (myRec) {
+      const perfect = myRec.score === myRec.questions.length;
+      cls += perfect ? ' done-perfect' : ' done-partial';
+      onclick = `onclick="showDayDetail('${dateStr}')"`;
+    } else if (hasQuiz) {
+      cls += ' has-quiz-only';
+      onclick = `onclick="startQuiz('${dateStr}')"`;
+    } else {
+      cls += ' no-quiz';
+    }
+
+    if (isToday) cls += ' today';
+
+    cells.push(`<div class="${cls}" ${onclick}>${d}</div>`);
+  }
+
+  document.getElementById('cal-grid').innerHTML = cells.join('');
+}
+
+// ── Start quiz (any date) ──
+async function startQuiz(dateStr) {
+  const topic = getTopicForDate(dateStr);
+  document.getElementById('loading-title').textContent = '載入題目中';
+  document.getElementById('loading-text').textContent  = 'Claude 正在根據主題生成題目…';
+  showView('loading');
+  try {
+    const { data, error } = await sb.functions.invoke('generate-quiz', { body: { topic, date: dateStr } });
+    if (error) throw error;
+    const questions = data.questions.map(q => ({ ...q, scenario: data.scenario || q.scenario }));
+    currentQuiz = { date: dateStr, topic: topic.title, questions, answers: new Array(questions.length).fill(null), score: 0 };
+    currentQ = 0;
+    showView('quiz');
+    renderQuestion();
+  } catch(e) {
+    showView('home');
+    alert('產生題目時發生錯誤：' + (e.message || JSON.stringify(e)));
+  }
+}
+
+// ── Regen ──
+async function regenToday() {
+  if (!isAdmin) return;
+  if (!confirm('確定要刪除今日題目並重新生成嗎？')) return;
+  document.getElementById('loading-title').textContent = '重新生成中';
+  document.getElementById('loading-text').textContent  = '刪除今日題目並重新生成…';
+  showView('loading');
+  try {
+    await sb.from('daily_quiz').delete().eq('date', getTodayKey());
+    const topic = getTopicForDate(getTodayKey());
+    await sb.functions.invoke('generate-quiz', { body: { topic } });
+    await loadDailyQuizzes();
+    showView('home');
+    renderHome();
+    alert('今日題目已重新生成！');
+  } catch(e) {
+    showView('home');
+    alert('重新生成失敗：' + (e.message || JSON.stringify(e)));
+  }
+}
+
+// ── Quiz render ──
+function renderQuestion() {
+  const q     = currentQuiz.questions[currentQ];
+  const total = currentQuiz.questions.length;
+  const done  = currentQuiz.answers[currentQ] !== null;
+  const chose = currentQuiz.answers[currentQ];
+  const pct   = Math.round((currentQ / total) * 100);
+
+  document.getElementById('quiz-topic-bar').textContent = currentQuiz.topic;
+  document.getElementById('quiz-counter').textContent   = `${currentQ+1} / ${total}`;
+  document.getElementById('progress-fill').style.width  = pct + '%';
+  document.getElementById('prog-left').textContent      = `第 ${currentQ+1} / ${total} 題`;
+  document.getElementById('prog-right').textContent     = `已答對 ${currentQuiz.score} 題`;
+  document.getElementById('btn-prev').disabled          = currentQ === 0;
+  document.getElementById('btn-next').textContent       = currentQ===total-1 ? '查看成績 →' : '下一題 →';
+
+  const lvlMap = { easy:['基礎','badge-easy'], medium:['中階','badge-medium'], hard:['進階','badge-hard'] };
+  const [lbl, lcls] = lvlMap[q.level] || ['中階','badge-medium'];
+
+  const opts = q.options.map((opt,i) => {
+    let cl = 'option-btn';
+    if (done) {
+      if (i===q.answer) cl+=' reveal';
+      else if (i===chose && chose!==q.answer) cl+=' wrong';
+    }
+    return `<button class="${cl}" ${done?'disabled':''} onclick="selectAnswer(${i})">${opt}</button>`;
+  }).join('');
+
+  document.getElementById('quiz-content').innerHTML = `
+    <span class="badge ${lcls}">${lbl}</span>
+    <div class="scenario-box"><div class="scenario-box-label">案例背景</div>${q.scenario||''}</div>
+    <div class="question-text">${q.q}</div>
+    <div class="options">${opts}</div>
+    ${done ? `<div class="explanation-box">${q.explanation}</div>` : ''}
+  `;
+  window.scrollTo(0,0);
+}
+
+function selectAnswer(i) {
+  if (currentQuiz.answers[currentQ]!==null) return;
+  currentQuiz.answers[currentQ] = i;
+  if (i===currentQuiz.questions[currentQ].answer) currentQuiz.score++;
+  renderQuestion();
+}
+function prevQ() { if (currentQ>0) { currentQ--; renderQuestion(); } }
+function nextQ() {
+  if (currentQ<currentQuiz.questions.length-1) { currentQ++; renderQuestion(); } else finishQuiz();
+}
+function confirmExit() {
+  if (confirm('確定要離開？目前進度不會儲存。')) { showView('home'); renderHome(); }
+}
+
+// ── Finish ──
+async function finishQuiz() {
+  const { date, topic, questions, answers, score } = currentQuiz;
+  const total = questions.length;
+  const record = {
+    date, topic, score,
+    questions: questions.map((q,i) => ({ ...q, chosen: answers[i] }))
+  };
+  await saveRecord(record);
+  await loadDailyQuizzes();
+
+  document.getElementById('score-big').textContent   = score;
+  document.getElementById('score-denom').textContent = `/ ${total}`;
+  document.getElementById('score-topic').textContent = topic;
+  const msgs = [
+    '這組題目難度較高，不用氣餒。建議把解析全部讀完，明天再挑戰。',
+    '有一定基礎，但還有進步空間。建議從答錯的題目反推哪個概念還不夠清晰。',
+    '不錯的表現！建議回頭看看答錯的解析，理解「為什麼」比記答案更重要。',
+    '全對！這個主題你已掌握得非常紮實。'
+  ];
+  document.getElementById('score-msg').textContent =
+    score===total ? msgs[3] : score>=7 ? msgs[2] : score>=4 ? msgs[1] : msgs[0];
+  showView('score');
+}
+
+// ── Day detail ──
+function showDayDetail(date) {
+  const rec = getMyRecord(date);
+  if (!rec) return;
+
+  showWrongOnly = false;
+  const d = new Date(date+'T00:00:00');
+  const dateStr = d.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const perfect = rec.score === rec.questions.length;
+
+  document.getElementById('day-topbar-title').textContent = '練習回顧';
+
+  renderDayDetail(rec, dateStr, perfect);
+  showView('day');
+}
+
+function renderDayDetail(rec, dateStr, perfect) {
+  const questions = showWrongOnly
+    ? rec.questions.filter(q => q.chosen !== q.answer)
+    : rec.questions;
+
+  const qHTML = questions.length === 0
+    ? '<div class="no-wrong">🎉 這天全部答對，沒有錯題！</div>'
+    : questions.map((q, i) => {
+        const isWrong = q.chosen !== q.answer;
+        const opts = q.options.map((opt,j) => {
+          let cl = 'history-q-opt';
+          if (j===q.answer) cl+=' correct';
+          else if (j===q.chosen && q.chosen!==q.answer) cl+=' wrong';
+          return `<div class="${cl}">${opt}</div>`;
+        }).join('');
+        const lvl = q.level==='easy'?'基礎':q.level==='medium'?'中階':'進階';
+        const origIdx = showWrongOnly ? rec.questions.indexOf(q) + 1 : i + 1;
+        return `<div class="history-q-item">
+          <div class="history-q-num">第 ${origIdx} 題 · ${lvl} ${isWrong ? '<span class="wrong-badge">答錯</span>' : ''}</div>
+          <div class="history-q-text">${q.q}</div>
+          <div class="history-q-options">${opts}</div>
+          <div class="history-exp">${q.explanation}</div>
+        </div>`;
+      }).join('');
+
+  document.getElementById('day-detail-content').innerHTML = `
+    <div class="day-detail-header">
+      <div class="day-detail-date">${dateStr}</div>
+      <div class="day-detail-topic">${rec.topic}</div>
+      <div class="day-detail-score ${perfect?'perfect':''}">${rec.score} / ${rec.questions.length} 答對${perfect?' · 全對！':''}</div>
+    </div>
+    <div class="wrong-only-toggle">
+      <button class="toggle-btn ${showWrongOnly?'active':''}" onclick="toggleWrongOnly(${JSON.stringify(rec).replace(/"/g,'&quot;')}, '${dateStr}', ${perfect})">
+        ${showWrongOnly ? '顯示全部題目' : '只看錯題'}
+      </button>
+      <span style="font-size:13px;color:var(--text-tertiary)">${showWrongOnly ? `共 ${questions.length} 道錯題` : `共 ${rec.questions.length} 題`}</span>
+    </div>
+    ${qHTML}
+  `;
+}
+
+function toggleWrongOnly(rec, dateStr, perfect) {
+  showWrongOnly = !showWrongOnly;
+  renderDayDetail(rec, dateStr, perfect);
+}
+
+// ── Boot ──
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { currentUser = session.user; await initHome(); }
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if (session && !currentUser) { currentUser = session.user; await initHome(); }
+  });
+})();
+</script>
+</body>
+</html>
